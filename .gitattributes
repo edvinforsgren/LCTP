@@ -1,0 +1,2 @@
+dino_feature_extraction/data/A549-WT/dino_vitb14_features/A549-WT-median_well_features.parquet.gzip filter=lfs diff=lfs merge=lfs -text
+dino_feature_extraction/data/U2OS-WT/dino_vitb14_features/U2OS-WT-median_well_features.parquet.gzip filter=lfs diff=lfs merge=lfs -text
