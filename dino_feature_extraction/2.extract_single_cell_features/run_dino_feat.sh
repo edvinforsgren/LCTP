@@ -6,7 +6,7 @@ config_file="/tmp/config_${cell}.yaml"
 cat <<EOL > $config_file
 path_incl: "dino_feature_extraction/data/$cell/crops_all_timepoints/cropped_expand_torch/incl/metadata_incl"
 base_dir: "dino_feature_extraction/data/$cell/"
-save_dir: "dino_feature_extraction/data/$cell/dino_vitb16_features/single_cell_features"
+save_dir: "dino_feature_extraction/data/$cell/dino_vitb14_features/single_cell_features"
 channels: ['Ph']
 save_channel_intensities: "dino_feature_extraction/data/$cell/channel_intensities_$cell.yaml"
 batch_size: 1536

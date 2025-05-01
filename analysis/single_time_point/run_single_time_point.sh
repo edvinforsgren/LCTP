@@ -19,7 +19,7 @@ time:
     hour: 48
 data:
     cell: "$cell"
-    path: "dino_feature_extraction/data/$cell/dino_vitb16_features/$cell-median_well_features.parquet.gzip"
+    path: "dino_feature_extraction/data/$cell/dino_vitb14_features/$cell-median_well_features.parquet.gzip"
     save_path: 'analysis/pred_data/$cell-stp/'
     compare_config_file_path: "analysis/comparison/$cell-analysis-datapaths.yaml"
 EOL
