@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import os
 import yaml
-from joblib import Parallel, delayed
 import torch.multiprocessing as mp
 import argparse
 import torch.nn as nn
@@ -167,8 +166,7 @@ if __name__  == "__main__":
     # Filter out positive controls
     df = df[df['Metadata_cmpd_moa_group'] != 'undefined'].copy()
     df = df[df['Metadata_cmpd_moa_group'].notnull()].copy()
-    # # Add 4 hours to P106073 since it was not imaged correctly
-    # df.loc[df['Metadata_Plate'] == "P106073", 'Metadata_hours'] = df[df['Metadata_Plate'] == "P106073"]['Metadata_hours'] + 4
+
     # Define MOAs and compound lists
     moas = [moa for moa in df.Metadata_cmpd_moa_group.unique().tolist() 
             if (moa and 'dmso' not in str(moa))]
