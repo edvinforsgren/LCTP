@@ -13,10 +13,9 @@ channels: ['Ph']
 cell_healths: ['Live', 'Dead']
 EOL
 echo "Running cell crop for $cell with config file: $config_file"
-# Run the singularity command with the temporary config file
-# /bin/bash -c "source venv/bin/activate && python dino_feature_extraction/1.crop_cells/crop_cells.py $config_file"
+# Run the cell crops with the temporary config file
 /bin/bash -c "source venv/bin/activate && PYTHONPATH=. python dino_feature_extraction/1.crop_cells/crop_cells.py $config_file"
 # Clean up the temporary config file
-# rm $config_file
+rm $config_file
 done
 

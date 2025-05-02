@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import os
 import yaml
-from joblib import Parallel, delayed
 import torch.multiprocessing as mp
 import argparse
 import torch.nn as nn
@@ -140,17 +139,6 @@ if __name__  == "__main__":
     drop_out = config['model']['dropout_rate']
     compare_config_file_path = config['data']['compare_config_file_path']
       
-    # Set random seeds for reproducibility
-    # torch.manual_seed(seed)
-    # torch.cuda.manual_seed(seed)
-    # torch.cuda.manual_seed_all(seed)
-    # np.random.seed(seed)
-    # random.seed(seed)
-    # torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
-    # torch.use_deterministic_algorithms(True)
-
-
     df = pd.read_parquet(data_path)
     if normalize:
         df = ut.normalize_plate_data(df)
@@ -160,8 +148,7 @@ if __name__  == "__main__":
     # Filter out positive controls
     df = df[df['Metadata_cmpd_moa_group'] != 'undefined'].copy()
     df = df[df['Metadata_cmpd_moa_group'].notnull()].copy()
-    # # Add 4 hours to P106073 since it was not imaged correctly
-    # df.loc[df['Metadata_Plate'] == "P106073", 'Metadata_hours'] = df[df['Metadata_Plate'] == "P106073"]['Metadata_hours'] + 4
+
     # Define MOAs and compound lists
     moas = [moa for moa in df.Metadata_cmpd_moa_group.unique().tolist() 
             if (moa and 'dmso' not in str(moa))]

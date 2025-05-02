@@ -43,13 +43,10 @@ if __name__ == "__main__":
             print("Extracting from: ", timepoint)
             print(n_timepoint, "of", len(metadata_incl.Metadata_time.unique().tolist()))
             time_metadata = metadata_incl.query(f'Metadata_time == "{timepoint}"')
-            # create a dataset and load data
-            
-            # dataset = fesu.CellDataset_zip(time_metadata, base_dir, channel_index=channel_i, channel_mean=channel_intensities['channel_means'][channel_i], channel_std=channel_intensities['channel_stds'][channel_i], channel_max=channel_intensities['channel_maxs'][channel_i])
+            # create a dataset and load data          
             dataset = ut.CellDataset_zip(time_metadata, base_dir, channel_index=channel_i, channel_mean=channel_intensities['channel_means'][channel_i], channel_std=channel_intensities['channel_stds'][channel_i], channel_max=channel_intensities['channel_maxs'][channel_i])
             dataloader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=16, pin_memory=True)
 
-            # features_all_cell_health_Ph = fesu.get_all_features(time_metadata, dataloader, model)
             features_all_cell_health_Ph = ut.get_all_features(time_metadata, dataloader, model)
             full_save_dir = save_dir + "_" + channel_name
             print(f"Directory to save the metadata: {full_save_dir}")

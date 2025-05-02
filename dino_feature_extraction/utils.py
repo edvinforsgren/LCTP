@@ -101,11 +101,7 @@ def crop_save_all_cells_and_channel_zipped(df, base_dir, mask_dirs, scan_dirs, c
 
     for i in range(len(scan_dirs)):
         print(i+1, 'of', len(scan_dirs), ' directories')
-    # for i in range(1):
-        # print(scan_dirs[i])
-        # print(all_wells)
         for well in all_wells:
-        # for well in ['A1', 'A2']:
             sub_df = df[df['Metadata_Well'] == well]
             metadata = sub_df.iloc[0].tolist()  # Extract metadata as a list for the current well
             for site in sites: 
@@ -125,7 +121,6 @@ def crop_save_all_cells_and_channel_zipped(df, base_dir, mask_dirs, scan_dirs, c
                     if np.max(mask_array) == 0:
                         continue
                     date_time = scan_dirs[i][-16:-4]
-                    # print(date_time)
                     hh, mm = extract_hours_minutes(date_time, start_time, date_format)
                     plate = re.search(r"/(\d+)/([^/]+)\.tif$", scan_path).group(1)  # Extract plate from first scan path of the list.
                     scan_arrays = []
@@ -200,7 +195,6 @@ def crop_save_all_cells_and_channel_zipped(df, base_dir, mask_dirs, scan_dirs, c
 
                         
     path_columns = ['Scan_Paths', 'Zip_Paths', 'Filenames']
-    # print(metadata_list_incl)
     df_incl = pd.DataFrame(metadata_list_incl, columns=df.columns.tolist() + ['Metadata_Date', 'Metadata_Vessel', 'Metadata_Site', 'Metadata_Cell_ID', 'Metadata_hours', 'Metadata_min', 'Metadata_time', 'Metadata_cell_health'])
     df_paths_incl = pd.DataFrame(img_paths_incl, columns=path_columns)
 

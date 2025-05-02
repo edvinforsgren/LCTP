@@ -98,7 +98,6 @@ def plot_predictions_by_compound_without_axis(full_df, moas, pred_labels, plot_h
             os.makedirs(save_dir, exist_ok=True)
             plt.savefig(f'{save_dir}/{cl}_nn_eq_scores.{format}', bbox_inches='tight', dpi=400)
             
-        # plt.show()
     # Add legend below the figure
     fig, ax = plt.subplots(figsize=(12, 1))
     labels = [label.split('_')[0] + '_' + label.split('_')[-1]  for label in pred_labels]
@@ -107,9 +106,7 @@ def plot_predictions_by_compound_without_axis(full_df, moas, pred_labels, plot_h
     ax.axis('off')
     if save_dir:
         os.makedirs(save_dir, exist_ok=True)
-        plt.savefig(f'{save_dir}/legend.{format}', bbox_inches='tight', dpi=300)
-    # plt.show()
-    
+        plt.savefig(f'{save_dir}/legend.{format}', bbox_inches='tight', dpi=300)    
 
 
 def _plot_predictions(df, pred_labels, color_map, ax, alpha=0.8):

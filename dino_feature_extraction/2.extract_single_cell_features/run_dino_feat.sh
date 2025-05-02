@@ -12,10 +12,9 @@ save_channel_intensities: "dino_feature_extraction/data/$cell/channel_intensitie
 batch_size: 1536
 model: ["facebookresearch/dinov2", "dinov2_vitb14"]
 EOL
-
-# /bin/bash -c "source venv/bin/activate && python dino_feature_extraction/2.extract_single_cell_features/extract_dino_features_from_zip.py $config_file"
+# Run the feature extraction with the temporary config file
 /bin/bash -c "source venv/bin/activate && PYTHONPATH=. python dino_feature_extraction/2.extract_single_cell_features/extract_dino_features_from_zip.py $config_file"
 
-# Optionally, clean up the temporary config file
+# Clean up the temporary config file
 rm $config_file
 done

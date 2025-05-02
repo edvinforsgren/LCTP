@@ -1,4 +1,3 @@
-# import feature_extraction_sc_utils as fesu
 ## This import works since the script is called with PYTHONPATH=. in running script which is ran from the root of the repo
 # If using a different structure, you may need to adjust the import statement
 from dino_feature_extraction import utils as ut
@@ -13,7 +12,6 @@ import timeit
 
 def process_timepoint(timepoint, metadata_incl, base_dir, channel_index):
     time_metadata = metadata_incl.query(f'Metadata_time == "{timepoint}"')
-    # dataset = fesu.CellDataset_zip(time_metadata, base_dir, channel_index=channel_index)
     dataset = ut.CellDataset_zip(time_metadata, base_dir, channel_index=channel_index)
     
     means, stds, maxes, mins = [], [], [], []

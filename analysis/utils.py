@@ -195,11 +195,7 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
     query_parts = []
     dmso_query_parts = []
     
-    if train:
-        # for excl, excl_metadata in zip(excls, excl_metadatas):
-        #     query_parts.append(f'{excl_metadata} != @excl')
-        #     dmso_query_parts.append(f'{excl_metadata} != @excl')
-        
+    if train:       
         query_parts.append('Metadata_hours == @hours')
         query_parts.append('Metadata_cmpd_cmpdname != "dmso"')
         operator = '!='
@@ -209,21 +205,16 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
         if dmso_hours:
             dmso_query_parts.append('Metadata_hours == @dmso_hours')
         main_query = ' and '.join(query_parts)
-        # dmso_query = ' and '.join(query_parts + ['Metadata_cmpd_cmpdname == "dmso"'])
         dmso_query = ' and '.join(dmso_query_parts + ['Metadata_cmpd_cmpdname == "dmso"'])
         
         data_df = df.query(main_query).copy()
         data_df = pd.concat([data_df, df.query(dmso_query)])
     else:
-        # for excl, excl_metadata in zip(excls, excl_metadatas):
-        #     query_parts.append(f'{excl_metadata} == @excl')
         operator = '=='
         main_query = build_query_from_exclusions(excl_metadatas, excls, operator=operator)
         query_parts.append(main_query)
-        # dmso_query = ['Metadata_cmpd_cmpdname == "dmso"']
         main_query = ' and '.join(query_parts)
-        # dmso_query = ' or '.join(dmso_query)
-        # dmso_df = df.query(dmso_query).copy()
+
         data_df = df.query(main_query).copy()
     X = get_featuredata(data_df).values
     y = data_df['Metadata_cmpd_moa_group']
