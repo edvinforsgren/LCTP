@@ -64,7 +64,6 @@ def plot_predictions_by_compound_without_axis(full_df, moas, pred_labels, plot_h
             copy_df = class_df.copy()
 
             _plot_predictions(copy_df, pred_labels, color_map, ax, alpha=0.8)
-                
             
             compound = fixed_all_compounds[i]
             print(compound)
@@ -160,7 +159,6 @@ def plot_all_compounds_without_axis(all_figs, moas, save_dir=None, figsize=(8, 7
     plt.show()
 
 
-
 if __name__  == "__main__":
     # Start times to measure runtime
     start = time.time()
@@ -180,10 +178,10 @@ if __name__  == "__main__":
     normalize_str = config['model']['normalize']
     learning_rate = config['model']['learning_rate']
     loss_function_str = config['model']['loss_function']
-
+    epochs = config['model']['epochs']
 
         
-    save_dir = f'{save_path}bs{batch_size}_lr{learning_rate}_loss{loss_function_str}_norm{normalize_str}'
+    save_dir = f'{save_path}epochs{epochs}_bs{batch_size}_lr{learning_rate}_loss{loss_function_str}_norm{normalize_str}'
     file_name = f'{cell}_dino_ts'
     os.makedirs(save_dir, exist_ok=True)
     full_df = pd.read_parquet(f'{save_dir}/{file_name}_cmpd_nn_eq_pred.parquet.gzip')

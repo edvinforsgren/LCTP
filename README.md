@@ -42,7 +42,7 @@ To run the feature extraction workflow (optional since the features are already 
 ### 3. Analysis
 To run the single time point and the time series analysis as well as generate the Eq. profile plots:
 ```bash
-./analysis/single_timpoint/run_single_time_point.sh
+./analysis/single_time_point/run_single_time_point.sh
 ./analysis/time_series/run_time_series.sh
 ./analysis/time_series/run_plot_time_series.sh
 ```

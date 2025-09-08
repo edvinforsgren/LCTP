@@ -143,8 +143,6 @@ if __name__  == "__main__":
     if normalize:
         df = ut.normalize_plate_data(df)
     
-    # Filter out EO-1428
-    df = df[df['Metadata_cmpd_oldcmpdname'] != 'EO-1428'].copy()
     # Filter out positive controls
     df = df[df['Metadata_cmpd_moa_group'] != 'undefined'].copy()
     df = df[df['Metadata_cmpd_moa_group'].notnull()].copy()
@@ -157,11 +155,7 @@ if __name__  == "__main__":
     compound_list = [df[df['Metadata_cmpd_moa_group'] == moa]['Metadata_cmpd_cmpdname'].unique().tolist() 
                     for moa in moas if moa != 'dmso']
     compound_list.sort()
-    ## To account for EO-1428 dropped in the previous step
-    for compounds in compound_list:
-        if len(compounds) < 12:
-            compounds.extend(' ')
-        compounds.sort()
+    
     # Only use single time point
     df = df.query(f'Metadata_hours == {hour}').copy()
     full_df, full_dmsos = run_all_data(df, moas, compound_list, hour=hour, epochs=epochs, layers=layers, batch_size=batch_size, learning_rate=learning_rate, activation_function=activation, loss_function=loss_function, drop_out=drop_out, global_seed=seed)
