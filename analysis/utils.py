@@ -191,31 +191,38 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
         hours: Time point to use
         moas: List of MOA classes
         train: If True prepare training data, if False prepare test data
+        excl_metadatas: Not used after fixed logic
     """
-    query_parts = []
-    dmso_query_parts = []
-    
-    if train:       
-        query_parts.append('Metadata_hours == @hours')
-        query_parts.append('Metadata_cmpd_cmpdname != "dmso"')
-        operator = '!='
-        main_query = build_query_from_exclusions(excl_metadatas, excls, operator=operator)
-        query_parts.append(main_query)
-        dmso_query_parts.append(main_query)
-        if dmso_hours:
-            dmso_query_parts.append('Metadata_hours == @dmso_hours')
-        main_query = ' and '.join(query_parts)
-        dmso_query = ' and '.join(dmso_query_parts + ['Metadata_cmpd_cmpdname == "dmso"'])
-        
-        data_df = df.query(main_query).copy()
-        data_df = pd.concat([data_df, df.query(dmso_query)])
-    else:
-        operator = '=='
-        main_query = build_query_from_exclusions(excl_metadatas, excls, operator=operator)
-        query_parts.append(main_query)
-        main_query = ' and '.join(query_parts)
 
-        data_df = df.query(main_query).copy()
+    df_copy = df.copy()
+    excl_plate = excls[0]
+    excl_cmps = excls[1]
+    
+    if train:
+        df_main = df_copy[df_copy['Metadata_hours'].isin(hours)] # pick out hours of interest
+        df_main = df_main[df_main['Metadata_cmpd_cmpdname'] != 'dmso'] # Remove dmso 
+
+        # remove test compounds and plate
+        df_main = df_main[~df_main.Metadata_cmpd_cmpdname.isin(excl_cmps)]
+        df_main = df_main[~df_main.Metadata_Plate.isin(excl_plate)]
+
+        # pick out dmso for training, excl plate. 
+        df_dmso = df_copy[(df_copy.Metadata_cmpd_cmpdname == 'dmso') & (~df_copy.Metadata_Plate.isin(excl_plate))]
+
+        # Add hours for training of dmso 
+        if dmso_hours:
+            df_dmso = df_dmso[df_dmso['Metadata_hours'].isin(dmso_hours)]
+
+        data_df = pd.concat([df_main, df_dmso]) # build train dataframe with dmso hours
+
+    else:
+        # pick out train plates and cmpds, include all hours
+        df_train = df_copy[df_copy.Metadata_cmpd_cmpdname.isin(excl_cmps)] # dmso is included here
+        df_train = df_train[df_train.Metadata_Plate.isin(excl_plate)] # Pick out only test plate
+
+        data_df = df_train.copy()
+
+    # Pick out X and y values
     X = get_featuredata(data_df).values
     y = data_df['Metadata_cmpd_moa_group']
     y_encoded = np.zeros((len(y), len(moas)))
@@ -224,20 +231,3 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
             y_encoded[i, moas.index(label)] = 1
     else:
         return X, y_encoded, data_df
-
-def build_query_from_exclusions(excl_metadata_cols, excl_list, operator):
-    query_groups = []
-    
-    # Handle each group of exclusions
-    for excl_metadata, excl_values in zip(excl_metadata_cols, excl_list):
-        group_conditions = []
-        # Build condition for each value in the group
-        for value in excl_values:
-            group_conditions.append(f'{excl_metadata} {operator} "{value}"')
-        # Combine conditions within group with AND
-        if group_conditions:
-            query_groups.append(f'({" or ".join(group_conditions)})')
-    
-    # Combine all groups with AND
-    main_query = ' and '.join(query_groups)
-    return main_query
