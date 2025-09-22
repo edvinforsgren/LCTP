@@ -59,7 +59,7 @@ def process_smoothed_predictions(pred_dfs, moas):
         full_df = pred_dfs.copy()
     pred_labels = [f'smoothed_{pred_label}' for pred_label in pred_labels]
     
-    metadata_cols = ['Metadata_Plate', 'Metadata_Well', 'Metadata_cmpd_cmpdname', 
+    metadata_cols = ['Metadata_Plate', 'Metadata_Well', 'Metadata_cmpd_cmpdname', 'Metadata_cmpd_oldcmpdname', 
                     'Metadata_cmpd_moa_group', 'Metadata_Cells']
     full_df = full_df.sort_values(by=metadata_cols).reset_index(drop=True).copy()
     df_pivot = full_df.melt(id_vars=metadata_cols + ['Metadata_hours'], 
