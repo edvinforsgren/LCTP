@@ -49,7 +49,7 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
         criterion=loss_function
     )
     
-    mlp.fit(X_train, y_encoded, epochs=epochs, batch_size=batch_size, learning_rate=learning_rate, validation_split=0, print_freq=200)
+    mlp.fit(X_train, y_encoded, epochs=epochs, batch_size=batch_size, learning_rate=learning_rate, validation_split=0, print_freq=48)
 
     # Get predictions
     y_preds.append(mlp.predict(torch.from_numpy(X_test).cuda()))
