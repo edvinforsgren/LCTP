@@ -186,30 +186,28 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
     
     Args:
         df: Input dataframe
-        excl_plate: Plate to exclude from training or use for testing
-        excl_cmp: Compound to exclude from training or use for testing
-        hours: Time point to use
+        excls: List of lists containing values to exclude/include for each metadata column
+        hours: Time point(s) to use for training
         moas: List of MOA classes
         train: If True prepare training data, if False prepare test data
-        excl_metadatas: Not used after fixed logic
+        excl_metadatas: Metadata columns to use for exclusion (must match length of excls)
+        dmso_hours: Hour(s) to include DMSO controls (only for training, defaults to hours if None)
     """
-
+    
     df_copy = df.copy()
-    excl_plate = excls[0]
-    excl_cmps = excls[1]
     
     if train:
         df_main = df_copy[df_copy['Metadata_hours'].isin(hours)] # pick out hours of interest
         df_main = df_main[df_main['Metadata_cmpd_cmpdname'] != 'dmso'] # Remove dmso 
 
         # remove test compounds and plate
-        df_main = df_main[~df_main.Metadata_cmpd_cmpdname.isin(excl_cmps)]
-        df_main = df_main[~df_main.Metadata_Plate.isin(excl_plate)]
+        for excl_metadata, excl_values in zip(excl_metadatas, excls):
+            df_main = df_main[~df_main[excl_metadata].isin(excl_values)]
 
-        # pick out dmso for training, excl plate. 
-        df_dmso = df_copy[(df_copy.Metadata_cmpd_cmpdname == 'dmso') & (~df_copy.Metadata_Plate.isin(excl_plate))]
+        df_dmso = df_copy[df_copy['Metadata_cmpd_cmpdname'] == 'dmso']
+        for excl_metadata, excl_values in zip(excl_metadatas, excls):
+            df_dmso = df_dmso[~df_dmso[excl_metadata].isin(excl_values)]
 
-        # Add hours for training of dmso 
         if dmso_hours:
             df_dmso = df_dmso[df_dmso['Metadata_hours'].isin(dmso_hours)]
 
@@ -217,10 +215,10 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
 
     else:
         # pick out train plates and cmpds, include all hours
-        df_train = df_copy[df_copy.Metadata_cmpd_cmpdname.isin(excl_cmps)] # dmso is included here
-        df_train = df_train[df_train.Metadata_Plate.isin(excl_plate)] # Pick out only test plate
-
-        data_df = df_train.copy()
+        df_test = df_copy.copy()
+        for excl_metadata, excl_values in zip(excl_metadatas, excls):
+            df_test = df_test[df_test[excl_metadata].isin(excl_values)]
+        data_df = df_test
 
     # Pick out X and y values
     X = get_featuredata(data_df).values
