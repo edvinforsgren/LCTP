@@ -170,10 +170,26 @@ if __name__  == "__main__":
             if (moa and 'dmso' not in str(moa))]
     moas.sort()
 
-    compound_list = [df[df['Metadata_cmpd_moa_group'] == moa]['Metadata_cmpd_cmpdname'].unique().tolist() 
-                    for moa in moas if moa != 'dmso']
+    compound_list = [df[df['Metadata_cmpd_moa_group'] == moa]['Metadata_cmpd_cmpdname'].unique().tolist() for moa in moas if moa != 'dmso']
     compound_list.sort()
 
+    # Stratified sorting to ensure balanced distribution of compounds during training
+    len_df = len(df)
+    random_num = np.zeros(len_df, dtype=float)
+    cmpd_codes, cmpd_uniques = pd.factorize(df['Metadata_cmpd_cmpdname'], sort=True)
+
+    for i in range(cmpd_codes.max() + 1):
+        idx = np.where(cmpd_codes == i)[0]
+        m = len(idx)
+        step = len_df / m
+        base = 1 + np.arange(m) * step
+        noise = np.random.normal(loc=0.0, scale=1.0, size=m)
+        num = base + noise
+        random_num[idx] = num
+    df['random_num'] = random_num
+    df = df.sort_values('random_num', ascending=True).drop(columns=['random_num']).reset_index(drop=True)
+
+    
     full_df, full_dmsos = run_all_data(df, moas, compound_list, hours1=hours1, hours2=hours2, epochs=epochs, layers=layers, batch_size=batch_size, learning_rate=learning_rate, activation_function=activation, loss_function=loss_function, drop_out=drop_out, global_seed=seed)
 
     save_dir = f'{save_path}epochs{epochs}_bs{batch_size}_lr{learning_rate}_loss{loss_function_str}_norm{normalize_str}'
