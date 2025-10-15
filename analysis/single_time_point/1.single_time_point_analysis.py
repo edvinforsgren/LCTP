@@ -47,7 +47,6 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list, 
         activation_fn=activation_function,
         criterion=loss_function
     )
-    y_encoded = y_encoded.astype(np.float32)
     mlp.fit(X_train, y_encoded, epochs=epochs, batch_size=batch_size, learning_rate=learning_rate, validation_split=0, print_freq=48)
 
     # Get predictions
