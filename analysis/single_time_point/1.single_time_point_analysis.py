@@ -158,20 +158,6 @@ if __name__  == "__main__":
     
     # Only use single time point
     df = df.query(f'Metadata_hours == {hour}').copy()
-    # Stratified sorting to ensure balanced distribution of compounds during training
-    len_df = len(df)
-    random_num = np.zeros(len_df, dtype=float)
-    cmpd_codes, cmpd_uniques = pd.factorize(df['Metadata_cmpd_cmpdname'], sort=True)
-
-    for i in range(cmpd_codes.max() + 1):
-        idx = np.where(cmpd_codes == i)[0]
-        m = len(idx)
-        step = len_df / m
-        base = 1 + np.arange(m) * step
-        noise = np.random.normal(loc=0.0, scale=1.0, size=m)
-        num = base + noise
-        random_num[idx] = num
-    df['random_num'] = random_num
     full_df, full_dmsos = run_all_data(df, moas, compound_list, hour=hour, epochs=epochs, layers=layers, batch_size=batch_size, learning_rate=learning_rate, activation_function=activation, loss_function=loss_function, drop_out=drop_out, global_seed=seed)
     
 
