@@ -17,6 +17,7 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
                      activation_function, loss_function, drop_out):
      # Set a unique seed for each process
     unique_seed = global_seed + cmp_idx + int(excl_plate[-3:])
+    print(f"Unique seed: {unique_seed}")
     # Set deterministic and other configurations
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -36,11 +37,10 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
     for hours, time in zip([hours1, hours2], ['early', 'late']):
         dmso_hours = hours1 + hours2
         # Prepare training data
-        X_train, y_encoded, _ = ut.prepare_data_mod(df, [excl_plate, excl_cmp], hours, moas, train=True, 
-                                                excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'], dmso_hours=dmso_hours)
+        X_train, y_encoded, _ = ut.prepare_data_mod(df, [excl_plate], hours, moas, train=True, 
+                                                excl_metadatas=['Metadata_Plate'], dmso_hours=dmso_hours)
         # Prepare test data
-        X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [excl_plate, excl_cmp + ['dmso']], hours, moas, train=False, 
-                                                        excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'])
+        X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [excl_plate], hours, moas, train=False, excl_metadatas=['Metadata_Plate'])
         # Train model
         mlp = ut.GeneralizedNeuralNetwork(
             hidden_layers=layers, 
@@ -53,7 +53,7 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
         mlp.fit(X_train, y_encoded, epochs=epochs, batch_size=batch_size, learning_rate=learning_rate, validation_split=0, print_freq=48)
 
         # Get predictions
-        y_preds.append(mlp.predict(torch.from_numpy(X_test).cuda()))
+        y_preds.append(mlp.predict(torch.from_numpy(X_test).type(torch.float32).cuda()))
         pred_labels.append([f'{c}_pred_{time}' for c in moas])
     # Create prediction DataFrame
     true_labels = [f'{c}_true' for c in moas]
@@ -62,6 +62,7 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
         pred_df = pd.concat([pred_df, pd.DataFrame(data=y_pred.cpu().numpy(), columns=pred_label)], axis=1)
 
     pred_df = pd.concat([pred_df, pd.DataFrame(data=y_encoded_test, columns=true_labels)], axis=1)
+    pred_df['Metadata_cv_seed'] = unique_seed
     return pred_df
 
 def run_all_data(df, moas, compound_list, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out, global_seed):
@@ -72,20 +73,16 @@ def run_all_data(df, moas, compound_list, hours1, hours2, epochs, layers, batch_
     n_compounds = len(compound_list[0])
 
     pred_dfs = []
-
-    # Outer loop over plates
-    for plate_idx, excl_plate in enumerate(unique_plates):
-        print(f"Round {plate_idx} of {n_plates - 1}")
         
-        # Initialize multiprocessing pool with a closure for worker_init_fn
-        with mp.Pool(processes=mp.cpu_count()) as pool:
-            results = pool.starmap(process_compound,
-                [(cmp_idx, excl_plate, global_seed, df, moas, compound_list, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
-                 for cmp_idx in range(n_compounds)]
-            )
-            
-        # Add the results to the prediction dataframe list
-        pred_dfs.extend(results)
+    # Initialize multiprocessing pool with a closure for worker_init_fn
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.starmap(process_compound,
+            [(plate_idx, unique_plates[plate_idx], global_seed, df, moas, compound_list, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
+                for plate_idx in range(n_plates)]
+        )
+        
+    # Add the results to the prediction dataframe list
+    pred_dfs.extend(results)
 
     dmso_dfs = []
     pred_dfs_new = []

@@ -60,7 +60,7 @@ def process_smoothed_predictions(pred_dfs, moas):
     pred_labels = [f'smoothed_{pred_label}' for pred_label in pred_labels]
     
     metadata_cols = ['Metadata_Plate', 'Metadata_Well', 'Metadata_cmpd_cmpdname', 'Metadata_cmpd_oldcmpdname', 
-                    'Metadata_cmpd_moa_group', 'Metadata_Cells']
+                    'Metadata_cmpd_moa_group', 'Metadata_Cells', 'Metadata_cv_seed']
     full_df = full_df.sort_values(by=metadata_cols).reset_index(drop=True).copy()
     df_pivot = full_df.melt(id_vars=metadata_cols + ['Metadata_hours'], 
                            value_vars=pred_labels, 
@@ -212,7 +212,6 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
             df_dmso = df_dmso[df_dmso['Metadata_hours'].isin(dmso_hours)]
 
         data_df = pd.concat([df_main, df_dmso]) # build train dataframe with dmso hours
-        data_df = shuffle_data(data_df)# shuffle training data
 
     else:
         # pick out train plates and cmpds, include all hours
@@ -220,7 +219,7 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
         for excl_metadata, excl_values in zip(excl_metadatas, excls):
             df_test = df_test[df_test[excl_metadata].isin(excl_values)]
         data_df = df_test
-
+    data_df = shuffle_data(data_df)# shuffle data
     # Pick out X and y values
     X = get_featuredata(data_df).values
     y = data_df['Metadata_cmpd_moa_group']
@@ -249,6 +248,6 @@ def shuffle_data(df):
     # Assign back to the DataFrame
     df = df.copy()
     df['Rnum'] = r_num
-    df = df.sort_values('Rnum', ascending=True).reset_index(drop=True)
-    df = df.drop(columns=['Rnum'])
+    df = df.sort_values('Rnum', ascending=True).drop(columns=['Rnum']).reset_index(drop=True)
     return df
+ 
