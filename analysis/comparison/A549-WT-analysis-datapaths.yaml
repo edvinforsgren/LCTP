@@ -1,0 +1,10 @@
+single_timepoint:
+  single_time_point_analysis: analysis/pred_data/A549-WT-stp/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_stp_cmpd_nn_eq_pred.parquet.gzip
+  single_time_point_analysis_dmso: analysis/pred_data/A549-WT-stp/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_stp_dmso_nn_eq_pred.parquet.gzip
+  single_time_point_analysis_dmso_processed: analysis/pred_data/A549-WT-stp/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_stp_dmso_nn_eq_pred_processed.parquet.gzip
+  single_time_point_analysis_processed: analysis/pred_data/A549-WT-stp/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_stp_cmpd_nn_eq_pred_processed.parquet.gzip
+time_series:
+  time_series_analysis: analysis/pred_data/A549-WT-ts/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_dino_ts_cmpd_nn_eq_pred.parquet.gzip
+  time_series_analysis_dmso: analysis/pred_data/A549-WT-ts/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_dino_ts_dmso_nn_eq_pred.parquet.gzip
+  time_series_analysis_processed: analysis/pred_data/A549-WT-ts/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_dino_ts_cmpd_nn_eq_pred_smooth.parquet.gzip
+  time_series_dmso_processed: analysis/pred_data/A549-WT-ts/epochs200_bs64_lr0.0004_lossMSELoss_normTrue/A549-WT_dino_ts_dmso_nn_eq_pred_smooth.parquet.gzip
