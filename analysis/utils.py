@@ -212,6 +212,7 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
             df_dmso = df_dmso[df_dmso['Metadata_hours'].isin(dmso_hours)]
 
         data_df = pd.concat([df_main, df_dmso]) # build train dataframe with dmso hours
+        data_df = shuffle_data(data_df)# shuffle training data
 
     else:
         # pick out train plates and cmpds, include all hours
@@ -229,3 +230,25 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
             y_encoded[i, moas.index(label)] = 1
     else:
         return X, y_encoded, data_df
+
+def shuffle_data(df):
+    # Add a random seed to the data
+    n = len(df)
+    r_num  = np.zeros(n, dtype=float)
+    codes, uniques = pd.factorize(df['Metadata_cmpd_cmpdname'])
+    for i in range(codes.max() + 1):
+        idx = np.where(codes == i)[0]
+        m = len(idx)
+        step = n / m
+        base = 1 + np.arange(m) * step
+        noise = np.random.normal(loc=0.0, scale=1.0, size=m)
+        num = base + noise
+        num = np.random.permutation(num)
+        r_num[idx] = num
+ 
+    # Assign back to the DataFrame
+    df = df.copy()
+    df['Rnum'] = r_num
+    df = df.sort_values('Rnum', ascending=True).reset_index(drop=True)
+    df = df.drop(columns=['Rnum'])
+    return df
