@@ -181,7 +181,7 @@ class GeneralizedNeuralNetwork(nn.Module):
             outputs = self.forward(X_test)
         return outputs
     
-def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'], dmso_hours=None):
+def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'], dmso_hours=None, cmpd_idx=None):
     """Prepare training or test data for the neural network
     
     Args:
@@ -207,10 +207,11 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
         df_dmso = df_copy[df_copy['Metadata_cmpd_cmpdname'] == 'dmso']
         for excl_metadata, excl_values in zip(excl_metadatas, excls):
             df_dmso = df_dmso[~df_dmso[excl_metadata].isin(excl_values)]
+        if cmpd_idx is not None:
+            df_dmso = df_dmso[df_dmso['Metadata_index'] != (cmpd_idx + 1)]  # Ensure Metadata_index is int and matches cmpd_idx
 
         if dmso_hours:
             df_dmso = df_dmso[df_dmso['Metadata_hours'].isin(dmso_hours)]
-
         data_df = pd.concat([df_main, df_dmso]) # build train dataframe with dmso hours
         data_df = shuffle_data(data_df)# shuffle training data
 
@@ -219,6 +220,12 @@ def prepare_data_mod(df, excls, hours, moas, train=True, excl_metadatas=['Metada
         df_test = df_copy.copy()
         for excl_metadata, excl_values in zip(excl_metadatas, excls):
             df_test = df_test[df_test[excl_metadata].isin(excl_values)]
+        # Only include dmso's with specific Metadata_index
+        if cmpd_idx is not None:
+            df_test = df_test[
+                ((df_test['Metadata_cmpd_cmpdname'] == 'dmso') & (df_test['Metadata_index'] == (cmpd_idx + 1))) |
+                (df_test['Metadata_cmpd_cmpdname'] != 'dmso')
+                ]
         data_df = df_test
 
     # Pick out X and y values

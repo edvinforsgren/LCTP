@@ -10,11 +10,11 @@ import torch.nn as nn
 import time
 import random
 
-def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
+def process_compound(cmp_idx, global_seed, df, moas, compound_list,
                      hour, epochs, layers, batch_size, learning_rate,
                      activation_function, loss_function, drop_out):
     # Set a unique seed for each process
-    unique_seed = global_seed + cmp_idx + int(excl_plate[-3:])
+    unique_seed = global_seed + cmp_idx 
     # Set deterministic and other configurations
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -31,14 +31,12 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
     hours = [hour]
     y_preds = []
     pred_labels = []
-    excl_plate = [excl_plate]
     dmso_hours = hours
     # Prepare training data
-    X_train, y_encoded, _ = ut.prepare_data_mod(df, [excl_plate, excl_cmp], hours, moas, train=True, 
-                                                excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'], dmso_hours=dmso_hours)
+    X_train, y_encoded, _ = ut.prepare_data_mod(df, [excl_cmp], hours, moas, train=True, 
+                                                excl_metadatas=['Metadata_cmpd_cmpdname'], dmso_hours=dmso_hours, cmpd_idx=cmp_idx)
     # Prepare test data
-    X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [excl_plate,  excl_cmp + ['dmso']], hours, moas, train=False, 
-                                                        excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'])
+    X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [excl_cmp + ['dmso']], hours, moas, train=False, excl_metadatas=['Metadata_cmpd_cmpdname'], cmpd_idx=cmp_idx)
     # Train model
     mlp = ut.GeneralizedNeuralNetwork(
         hidden_layers=layers, 
@@ -71,20 +69,25 @@ def run_all_data(df, moas, compound_list, hour, epochs, layers, batch_size, lear
     n_compounds = len(compound_list[0])
 
     pred_dfs = []
+    # Set different Metadata_index based on the len of n_compounds to different dmso wells for cross-validation and 0 for others 
+    df['Metadata_index'] = 0
+    dmso_plate_wells = df[df['Metadata_cmpd_cmpdname'] == 'dmso'][['Metadata_Plate', 'Metadata_Well']].drop_duplicates()
 
-    # Outer loop over plates
-    for plate_idx, excl_plate in enumerate(unique_plates):
-        print(f"Round {plate_idx} of {n_plates - 1}")
+    for i, (plate, well) in enumerate(dmso_plate_wells.itertuples(index=False)):
+        df.loc[(df['Metadata_cmpd_cmpdname'] == 'dmso') & 
+           (df['Metadata_Plate'] == plate) & 
+           (df['Metadata_Well'] == well), 'Metadata_index'] = (i % n_compounds) + 1
+    df['Metadata_index'] = df['Metadata_index'].astype(int)
         
-        # Initialize multiprocessing pool with a closure for worker_init_fn
-        with mp.Pool(processes=mp.cpu_count()) as pool:
-            results = pool.starmap(process_compound,
-                [(cmp_idx, excl_plate, global_seed, df, moas, compound_list, hour, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
-                 for cmp_idx in range(n_compounds)]
-            )
+    # Initialize multiprocessing pool with a closure for worker_init_fn
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.starmap(process_compound,
+            [(cmp_idx, global_seed, df, moas, compound_list, hour, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
+             for cmp_idx in range(n_compounds)]
+        )
 
-        # Add the results to the prediction dataframe list
-        pred_dfs.extend(results)
+    # Add the results to the prediction dataframe list
+    pred_dfs.extend(results)
 
     dmso_dfs = []
     pred_dfs_new = []
