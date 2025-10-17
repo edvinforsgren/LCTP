@@ -15,6 +15,7 @@ model:
     loss_function: 'MSELoss'
     dropout_rate: 0.5
     layers: [512, 256]
+    n_cvs: 7
 time:
     hours1: [6, 8, 10, 12, 14]
     hours2: [46, 48, 50, 52, 54]

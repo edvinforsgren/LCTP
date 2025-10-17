@@ -12,11 +12,11 @@ import random
 
 
 # Function to process a single compound index
-def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
+def process_compound(cv_idx, global_seed, df, moas,
                      hours1, hours2, epochs, layers, batch_size, learning_rate,
                      activation_function, loss_function, drop_out):
      # Set a unique seed for each process
-    unique_seed = global_seed + cmp_idx + int(excl_plate[-3:])
+    unique_seed = global_seed + cv_idx
     # Set deterministic and other configurations
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -29,18 +29,17 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
     # If using CUDA, set the seed for each GPU
     torch.cuda.manual_seed(unique_seed)
     torch.cuda.manual_seed_all(unique_seed)
-    excl_cmp = [cl[cmp_idx] for cl in compound_list]
     y_preds = []
     pred_labels = []
-    excl_plate = [excl_plate]
+
     for hours, time in zip([hours1, hours2], ['early', 'late']):
         dmso_hours = hours1 + hours2
         # Prepare training data
-        X_train, y_encoded, _ = ut.prepare_data_mod(df, [excl_plate, excl_cmp], hours, moas, train=True, 
-                                                excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'], dmso_hours=dmso_hours)
+        X_train, y_encoded, _ = ut.prepare_data_mod(df, [[cv_idx]], hours, moas, train=True, 
+                                                excl_metadatas=['Metadata_CV_index'], dmso_hours=dmso_hours)
         # Prepare test data
-        X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [excl_plate, excl_cmp + ['dmso']], hours, moas, train=False, 
-                                                        excl_metadatas=['Metadata_Plate', 'Metadata_cmpd_cmpdname'])
+        X_test, y_encoded_test, test_df = ut.prepare_data_mod(df, [[cv_idx]], hours, moas, train=False, 
+                                                        excl_metadatas=['Metadata_CV_index'])
         # Train model
         mlp = ut.GeneralizedNeuralNetwork(
             hidden_layers=layers, 
@@ -64,28 +63,26 @@ def process_compound(cmp_idx, excl_plate, global_seed, df, moas, compound_list,
     pred_df = pd.concat([pred_df, pd.DataFrame(data=y_encoded_test, columns=true_labels)], axis=1)
     return pred_df
 
-def run_all_data(df, moas, compound_list, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out, global_seed):
-
-    # Precompute unique values
-    unique_plates = df.Metadata_Plate.unique()
-    n_plates = len(unique_plates)
-    n_compounds = len(compound_list[0])
+def run_all_data(df, moas, n_cvs, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out, global_seed):
 
     pred_dfs = []
 
-    # Outer loop over plates
-    for plate_idx, excl_plate in enumerate(unique_plates):
-        print(f"Round {plate_idx} of {n_plates - 1}")
+    # Create a new column for CV group belonging, all unique wells have the same index
+    plate_well = df[['Metadata_Plate', 'Metadata_Well']].drop_duplicates().reset_index(drop=True)
+    # Assign CV indices
+    plate_well['Metadata_CV_index'] = plate_well.index % n_cvs
+    # Set Metadata_CV_index in the main dataframe
+    df = df.merge(plate_well, on=['Metadata_Plate', 'Metadata_Well'], how='left')
+    
+    # Initialize multiprocessing pool with a closure for worker_init_fn
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.starmap(process_compound,
+            [(cv_idx, global_seed, df, moas, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
+             for cv_idx in range(n_cvs)]
+        )
         
-        # Initialize multiprocessing pool with a closure for worker_init_fn
-        with mp.Pool(processes=mp.cpu_count()) as pool:
-            results = pool.starmap(process_compound,
-                [(cmp_idx, excl_plate, global_seed, df, moas, compound_list, hours1, hours2, epochs, layers, batch_size, learning_rate, activation_function, loss_function, drop_out)
-                 for cmp_idx in range(n_compounds)]
-            )
-            
-        # Add the results to the prediction dataframe list
-        pred_dfs.extend(results)
+    # Add the results to the prediction dataframe list
+    pred_dfs.extend(results)
 
     dmso_dfs = []
     pred_dfs_new = []
@@ -154,6 +151,7 @@ if __name__  == "__main__":
     loss_function_str = config['model']['loss_function']
     loss_function = getattr(nn, loss_function_str)
     drop_out = config['model']['dropout_rate']
+    n_cvs = config['model']['n_cvs']
     compare_config_file_path = config['data']['compare_config_file_path']
 
     df = pd.read_parquet(data_path)
@@ -169,10 +167,7 @@ if __name__  == "__main__":
             if (moa and 'dmso' not in str(moa))]
     moas.sort()
 
-    compound_list = [df[df['Metadata_cmpd_moa_group'] == moa]['Metadata_cmpd_cmpdname'].unique().tolist() for moa in moas if moa != 'dmso']
-    compound_list.sort()
-
-    full_df, full_dmsos = run_all_data(df, moas, compound_list, hours1=hours1, hours2=hours2, epochs=epochs, layers=layers, batch_size=batch_size, learning_rate=learning_rate, activation_function=activation, loss_function=loss_function, drop_out=drop_out, global_seed=seed)
+    full_df, full_dmsos = run_all_data(df, moas, n_cvs, hours1=hours1, hours2=hours2, epochs=epochs, layers=layers, batch_size=batch_size, learning_rate=learning_rate, activation_function=activation, loss_function=loss_function, drop_out=drop_out, global_seed=seed)
 
     save_dir = f'{save_path}epochs{epochs}_bs{batch_size}_lr{learning_rate}_loss{loss_function_str}_norm{normalize_str}'
     file_name = f'{cell}_dino_ts'
