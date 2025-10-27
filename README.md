@@ -1,7 +1,7 @@
 # Live-Cell Temporal Profiling
 
 This repository accompanies the preprint:  
-**"Label-Free Live-Cell Imaging improves Mode of Action Classification"**
+**"The time dimension matters: Improving mode of action classification with live-cell imaging"**
 
 📝 [Read on bioRxiv](https://doi.org/10.1101/2025.04.22.649936)
 
@@ -48,7 +48,15 @@ To run the single time point and the time series analysis as well as generate th
 ```
 
 ### 4. Comparison
-To compare the single time point and time series approach in terms of accuracy in confusion matrices us the notebook:
+To compare the single time point and time series approach in terms of accuracy in confusion matrices use the notebook:
 ```
 ./analysis/comparison/confusion_matrix_and_acc.ipynb
+```
+
+### 5. Supplementary cross-validation
+Results and code for different cross-validation approaches can found in the following branches:
+```
+supp-cv-7fold
+supp-cv-cmpdwise
+supp-cv-platewise
 ```
