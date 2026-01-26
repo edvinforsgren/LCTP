@@ -3,7 +3,7 @@
 This repository accompanies the preprint:  
 **"The time dimension matters: Improving mode of action classification with live-cell imaging"**
 
-📝 [Read on bioRxiv](https://doi.org/10.1101/2025.04.22.649936)
+📝 [Read in _Artifical Intelligence in the Life Sciences_ (Open Access)](https://doi.org/10.1016/j.ailsci.2025.100152)
 
 <p align="center">
 <img src="assets/overview.png" width="800px">
@@ -13,7 +13,9 @@ This repository accompanies the preprint:
 
 This codebase supports the analysis presented in the preprint and optionally the feature extraction workflow using DINOv2-based representations.
 
-To run the feature extraction, download the image dataset from **Figshare**: [Link to data coming soon]()
+To run the feature extraction, download the image dataset from [**Figshare**](https://doi.org/10.17044/scilifelab.29315642)
+
+For an overview of the compounds used in the paper see [**Supplementary Table**](https://raw.githubusercontent.com/edvinforsgren/LCTP/refs/heads/main/assets/Supplementary_Table_6.html)
 
 ## Getting Started
 

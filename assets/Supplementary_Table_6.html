@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The time dimension matters: Improving mode of action classification with live-cell imaging</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --bg-soft:#111827;
+    --panel:#0b1023;
+    --card:#0b122a;
+    --text:#e5e7eb;
+    --muted:#9ca3af;
+    --accent:#3b82f6;
+    --accent-2:#22c55e;
+    --border:#1f2937;
+    --chip-bg:#10172a;
+  }
+  *{ box-sizing:border-box }
+  body{
+    margin:0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji","Segoe UI Emoji";
+    background: linear-gradient(180deg, var(--bg) 0%, #0b1224 100%);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header{
+    padding: 28px 20px 16px;
+    background: radial-gradient(1200px 240px at 30% -20%, rgba(59,130,246,0.25), transparent),
+                radial-gradient(1200px 240px at 70% -20%, rgba(34,197,94,0.22), transparent);
+    border-bottom:1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .container{ width: 100%; max-width: 1600px; margin: 0 auto; padding: 0 12px; }
+  main.container { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding-bottom: 12px; }
+  h1{ margin:0 0 8px 0; font-size: 28px; letter-spacing: .2px; }
+  .subtitle{ color: var(--muted); margin:0 0 8px 0; }
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .chip{
+    background: var(--chip-bg);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border:1px solid var(--border);
+  }
+  .panel{
+    margin:16px auto 0;
+    background: linear-gradient(180deg, #0b1224, #0b1220);
+    border:1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    width: 100%;
+  }
+  .controls{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr .8fr .5fr .5fr auto;
+    gap:12px;
+    padding: 16px;
+    border-bottom:1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .control label{
+    display:block;
+    font-size:12px;
+    color: var(--muted);
+    margin-bottom:6px;
+  }
+  .control input[type="text"],
+  .control input[type="number"],
+  .control select{
+    width:100%;
+    background:#0a1328;
+    color: var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+    outline:none;
+    transition: border .15s, box-shadow .15s;
+  }
+  .control input:focus,
+  .control select:focus{ border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+  .btn-row{ display:flex; gap:8px; align-items:flex-end; }
+  .btn{
+    align-self:end;
+    background: linear-gradient(180deg, #1d4ed8, #1e40af);
+    color:white;
+    border:1px solid #1e3a8a;
+    padding:10px 14px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+    letter-spacing:.2px;
+  }
+  .btn.secondary{
+    background: #0a1328;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn:disabled{ opacity:.6; cursor:not-allowed; }
+  .table-wrap{
+    width:100%;
+    overflow:auto;
+    flex: 1;
+  }
+  table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    font-size: 14px;
+  }
+  thead th{
+    position:sticky;
+    top:0;
+    background: linear-gradient(180deg,#0e162e,#0a1328);
+    color: #cbd5e1;
+    text-align:left;
+    padding:12px;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+    z-index:2;
+  }
+  thead th.sortable{
+    cursor:pointer;
+  }
+  thead th.sortable .hint{
+    color: var(--muted);
+    font-size:11px; margin-left:6px;
+  }
+  tbody td{
+    padding:10px 12px;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+  }
+  tbody tr:nth-child(odd){ background: rgba(255,255,255,0.02); }
+  tbody tr:hover{ background: rgba(59,130,246,0.08); }
+  .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; font-size: 12.5px; }
+  .badge{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:12px;
+    border:1px solid var(--border);
+  }
+  .moa-AKT{ background: rgba(118,199,107,.12); color:#76c76b; border-color: rgba(118,199,107,.35); }
+  .moa-CDK{ background: rgba(135,206,235,.12); color:#87ceeb; border-color: rgba(135,206,235,.35); }
+  .moa-HDAC{ background: rgba(255,153,153,.12); color:#ff9999; border-color: rgba(255,153,153,.35); }
+  .moa-MAPK{ background: rgba(255,204,51,.12); color:#ffcc33; border-color: rgba(255,204,51,.35); }
+  .moa-PARP{ background: rgba(191,191,191,.12); color:#bfbfbf; border-color: rgba(191,191,191,.35); }
+  .moa-TUB{ background: rgba(201,160,220,.12); color:#c9a0dc; border-color: rgba(201,160,220,.35); }
+
+  .link a{ color:#93c5fd; text-decoration:none; }
+  .link a:hover{ text-decoration:underline; }
+  .muted{ color: var(--muted); }
+  .count{
+    padding:10px 16px;
+    color: var(--muted);
+    border-top:1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13px;
+  }
+  .truncate{
+    max-width: 420px;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+  }
+
+  /* Sticky Columns Setup */
+  th:nth-child(1), td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    width: 130px;
+    min-width: 130px;
+    max-width: 130px;
+    background-color: #0b1222;
+    border-right: 1px solid var(--border);
+  }
+  th:nth-child(2), td:nth-child(2) {
+    position: sticky;
+    left: 130px;
+    z-index: 10;
+    background-color: #0b1222;
+    border-right: 1px solid var(--border);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  thead th:nth-child(1), thead th:nth-child(2) {
+    z-index: 20;
+    background: linear-gradient(180deg,#0e162e,#0a1328);
+  }
+
+  tbody tr:nth-child(odd) td:nth-child(1),
+  tbody tr:nth-child(odd) td:nth-child(2) {
+    background-color: #0e172a;
+  }
+  
+  tbody tr:hover td:nth-child(1),
+  tbody tr:hover td:nth-child(2) {
+    background-color: #131b35;
+  }
+
+  @media (max-width: 900px){
+    .controls{ grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>The time dimension matters: Improving mode of action classification with live-cell imaging</h1>
+    <p class="subtitle">Supplementary Table 6</p>
+    <p class="subtitle">Edvin Forsgren, Jonne Rietdijk, David Holmberg, Julia Juneblad, Bianca Migliori, Martin M. Johansson, Jordi Carreras-Puigvert, Johan Trygg, Gillian Lovell, Ola Spjuth, Pär Jonsson</p>
+  </div>
+</header>
+
+<main class="container">
+  <section class="panel">
+    <div class="controls">
+      <div class="control">
+        <label for="q">Search (all fields)</label>
+        <input id="q" type="text" placeholder="e.g., Capivasertib, 371935-74-9, AKT, Selleckchem, 4.2" />
+      </div>
+      <div class="control">
+        <label for="moa">Filter by pathway (Metadata_moa)</label>
+        <select id="moa">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="vendor">Filter by vendor</label>
+        <select id="vendor">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="minConc">Min conc (µM)</label>
+        <input id="minConc" type="number" step="0.1" min="0" placeholder="e.g., 1.7" />
+      </div>
+      <div class="control">
+        <label for="maxConc">Max conc (µM)</label>
+        <input id="maxConc" type="number" step="0.1" min="0" placeholder="e.g., 13.3" />
+      </div>
+      <div class="btn-row">
+        <button id="resetBtn" class="btn secondary" title="Clear all filters">Reset</button>
+        <button id="csvBtn" class="btn" title="Download filtered table as CSV">Export CSV</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="compoundsTable">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="metadata_moa">Metadata_moa <span class="hint">↕</span></th>
+            <th class="sortable" data-key="compound_name">Compound_name <span class="hint">↕</span></th>
+            <th>Reference_URL</th>
+            <th class="sortable" data-key="concentration_uM" data-type="number">Concentration (µM) <span class="hint">↕</span></th>
+            <th class="sortable" data-key="vendor">Vendor <span class="hint">↕</span></th>
+            <th class="sortable" data-key="catalog_number">Catalog_Number <span class="hint">↕</span></th>
+            <th class="sortable" data-key="cas_number">CAS Number <span class="hint">↕</span></th>
+            <th class="sortable" data-key="formula">Formula <span class="hint">↕</span></th>
+            <th class="sortable" data-key="smiles">SMILES <span class="hint">↕</span></th>
+            <th class="sortable" data-key="inchi_key">InChI_Key <span class="hint">↕</span></th>
+            <th class="sortable" data-key="all_targets">All_targets <span class="hint">↕</span></th>
+            <th class="sortable" data-key="compound_name_original">Compound_name_original <span class="hint">↕</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="count">
+      <div id="counter">0 compounds</div>
+      <div id="sortStatus" class="muted">Not sorted</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const data = [
+  // ==== AKT ====
+  {metadata_moa:'AKT',compound_name:'10-DEBC',concentration_uM:13.3,vendor:'MedChemexpress',catalog_number:'HY-100654',cas_number:'925681-41-0',formula:'C20H26Cl2N2O',smiles:'CCN(CC)CCCCN1C2=C(C=CC=C2)OC3=CC=C(Cl)C=C13.[H]Cl',inchi_key:'SVKSJUIYYCQZEC-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/74627774',all_targets:'PIM1 (AKT inhibitor)',compound_name_original:'10-DEBC hydrochloride'},
+  {metadata_moa:'AKT',compound_name:'GSK2110183',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7521',cas_number:'1047644-62-1',formula:'C18H17Cl2FN4OS',smiles:'C[N]1N=CC(=C1C2=C(Cl)SC(=C2)C(=O)NC(CN)CC3=CC=CC(=C3)F)Cl',inchi_key:'AFJRDFWMXUECEW-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/46843057',all_targets:'AKT1 (competitive pan-Akt kinase inhibitor)',compound_name_original:'Afuresertib (GSK2110183)'},
+  {metadata_moa:'AKT',compound_name:'Buparlisib',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S2247',cas_number:'944396-07-0',formula:'C18H21F3N6O2',smiles:'NC1=CC(=C(C=N1)C2=NC(=NC(=C2)N3CCOCC3)N4CCOCC4)C(F)(F)F',inchi_key:'CWHUFRVAEUJCEF-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16654980',all_targets:'PIK3CG (Inhibits upstream PI3K activity)',compound_name_original:'Buparlisib (BKM120)'},
+  {metadata_moa:'AKT',compound_name:'AZD5363',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S8019',cas_number:'1143532-39-1',formula:'C21H25ClN6O2',smiles:'NC1(CCN(CC1)C2=NC=NC3=C2C=C[NH]3)C(=O)NC(CCO)C4=CC=C(Cl)C=C4',inchi_key:'JDUBGYFRJFOXQC-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/25227436',all_targets:'Akt (competitive pan-Akt kinase inhibitor)',compound_name_original:'Capivasertib (AZD5363)'},
+  {metadata_moa:'AKT',compound_name:'CCT128930',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2635',cas_number:'885499-61-6',formula:'C18H20ClN5',smiles:'NC1(CCN(CC1)C2=C3C=C[NH]C3=NC=N2)CC4=CC=C(Cl)C=C4',inchi_key:'RZIDZIGAXXNODG-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/17751819',all_targets:'AKT inhibitor',compound_name_original:'CCT128930'},
+  {metadata_moa:'AKT',compound_name:'GSK690693',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1113',cas_number:'937174-76-0',formula:'C21H27N7O3',smiles:'CC[N]1C(=NC2=C1C(=CN=C2C#CC(C)(C)O)OCC3CCCNC3)C4=NON=C4N',inchi_key:'KGPGFQWBCSZGEL-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16725726',all_targets:'AKT1|AKT2|AKT3|PAK4|PAK6|PAK7|PRKCQ|PRKG1|PRKX (AKT inhibitor)',compound_name_original:'GSK690693'},
+  {metadata_moa:'AKT',compound_name:'Ipatasertib',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2808',cas_number:'1001264-89-6',formula:'C24H32ClN5O2',smiles:'CC(C)NCC(C(=O)N1CCN(CC1)C2=C3C(C)CC(O)C3=NC=N2)C4=CC=C(Cl)C=C4',inchi_key:'GRZXWCHAXNAUHY-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/24788740',all_targets:'Akt (competitive pan-Akt kinase inhibitor)',compound_name_original:'Ipatasertib (GDC-0068)'},
+  {metadata_moa:'AKT',compound_name:'Miransertib',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S6811',cas_number:'1313881-70-7',formula:'C27H24N6',smiles:'NC1=C(C=CC=N1)C2=NC3=C(N=C(C=C3)C4=CC=CC=C4)[N]2C5=CC=C(C=C5)C6(N)CCC6',inchi_key:'HNFMVVHMKGFCMB-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/53262401',all_targets:'AKT2 (AKT inhibitor)',compound_name_original:'Miransertib (ARQ-092)'},
+  {metadata_moa:'AKT',compound_name:'AR-12',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1106',cas_number:'742112-33-0',formula:'C26H19F3N4O',smiles:'NCC(=O)NC1=CC=C(C=C1)[N]2N=C(C=C2C3=CC4=C(C=C3)C5=C(C=CC=C5)C=C4)C(F)(F)F',inchi_key:'YULUCECVQOCQFQ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/10027278',all_targets:'PDPK1 (Inihbits PDK-1)',compound_name_original:'OSU-03012 (AR-12)'},
+  {metadata_moa:'AKT',compound_name:'PI-103',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S1038',cas_number:'371935-74-9',formula:'C19H16N4O3',smiles:'OC1=CC(=CC=C1)C2=NC3=C(OC4=C3C=CC=N4)C(=N2)N5CCOCC5',inchi_key:'TUVCWJQQGGETHL-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9884685',all_targets:'PI3K (Inhibits PI3K, mTOR activity)',compound_name_original:'PI-103'},
+  {metadata_moa:'AKT',compound_name:'triciribine',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1117',cas_number:'35943-35-2',formula:'C13H16N6O4',smiles:'CN1N=C(N)C2=C[N](C3OC(CO)C(O)C3O)C4=C2C1=NC=N4',inchi_key:'HOGVTUZUJGHKPL-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/65399',all_targets:'AKT1/AKT2/AKT3',compound_name_original:'Triciribine (NSC 154020)'},
+  {metadata_moa:'AKT',compound_name:'Uprosertib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7492',cas_number:'1047634-65-0',formula:'C18H16Cl2F2N4O2',smiles:'C[N]1N=CC(=C1C2=C(Cl)OC(=C2)C(=O)NC(CN)CC3=CC(=C(F)C=C3)F)Cl',inchi_key:'AXTAPYRUEKNRBA-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/51042438',all_targets:'AKT1/AKT2/AKT3',compound_name_original:'Uprosertib (GSK2141795)'},
+
+  // ==== CDK ====
+  {metadata_moa:'CDK',compound_name:'DRF053-(R)',concentration_uM:13.3,vendor:'MedChemexpress',catalog_number:'HY-103383',cas_number:'1241675-76-2',formula:'C23H29Cl2N7O',smiles:'CC(C)N1C2=NC(N[C@@H](CO)CC)=NC(NC3=CC(C4=CC=CC=N4)=CC=C3)=C2N=C1.Cl.Cl',inchi_key:'BQPRBNGSDBTKAK-ZEECNFPPSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/71433624',all_targets:'CSNK1A1 (CDK inhibitor)',compound_name_original:'(R)-DRF053 dihydrochloride'},
+  {metadata_moa:'CDK',compound_name:'Abemaciclib (Verzenio)',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S5716',cas_number:'1231929-97-7',formula:'C27H32F2N8',smiles:'CCN1CCN(CC1)CC2=CN=C(NC3=NC=C(F)C(=N3)C4=CC(=C5N=C(C)[N](C(C)C)C5=C4)F)C=C2',inchi_key:'UZWDCWONPYILKI-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/46220502',all_targets:'CDK4/6 (Selective inhibition of CDK4/6 to induce G1 cell cycle arrest)',compound_name_original:'Abemaciclib (LY2835219)'},
+  {metadata_moa:'CDK',compound_name:'aminopurvalanol-a',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S0734',cas_number:'220792-57-4',formula:'C19H26ClN7O',smiles:'CC(C)C(CO)NC1=NC(=C2N=C[N](C(C)C)C2=N1)NC3=CC(=CC(=C3)N)Cl',inchi_key:'RAMROQQYRRQPDL-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/6604931',all_targets:'CDK2',compound_name_original:'Aminopurvalanol A'},
+  {metadata_moa:'CDK',compound_name:'BMS-265246',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2014',cas_number:'582315-72-8',formula:'C18H17F2N3O2',smiles:'CCCCOC1=C2C=N[NH]C2=NC=C1C(=O)C3=C(F)C=C(C)C=C3F',inchi_key:'SCFMWQIQBVZOQR-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/135402864',all_targets:'CDK1|CDK2 (CDK inhibitor)',compound_name_original:'BMS-265246'},
+  {metadata_moa:'CDK',compound_name:'LY2857785',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7511',cas_number:'1619903-54-6',formula:'C26H36N6O',smiles:'CC(C)C1=C2C=C(C=CC2=N[N]1C)C3=CC=NC(=N3)NC4CCC(CC4)NC5CCOCC5',inchi_key:'LHIUZPIDLZYPRL-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/78357764',all_targets:'CDK9',compound_name_original:'LY2857785'},
+  {metadata_moa:'CDK',compound_name:'Palbociclib (Ibrance)',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S4482',cas_number:'571190-30-2',formula:'C24H29N7O2',smiles:'CC(=O)C1=C(C)C2=CN=C(NC3=NC=C(C=C3)N4CCNCC4)N=C2N(C5CCCC5)C1=O',inchi_key:'AHJRHEGDXFFMBM-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5330286',all_targets:'CDK4/6 (Inhibition of CDK4/6 leading to cell cycle arrest in G1 phase)',compound_name_original:'Palbociclib'},
+  {metadata_moa:'CDK',compound_name:'PHA-793887',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S1487',cas_number:'718630-59-2',formula:'C19H31N5O2',smiles:'CC(C)CC(=O)NC1=N[NH]C2=C1CN(C(=O)C3CCN(C)CC3)C2(C)C',inchi_key:'HUXYBQXJVXOMKX-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/46191454',all_targets:'CDK7',compound_name_original:'PHA-793887'},
+  {metadata_moa:'CDK',compound_name:'purvalanol-a',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7793',cas_number:'212844-53-6',formula:'C19H25ClN6O',smiles:'CC(C)C(CO)NC1=NC(=C2N=C[N](C(C)C)C2=N1)NC3=CC=CC(=C3)Cl',inchi_key:'PMXCMJLOPOFPBT-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/456214',all_targets:'CDK2',compound_name_original:'Purvalanol A'},
+  {metadata_moa:'CDK',compound_name:'RGB-286638',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'E2821',cas_number:'784210-88-4',formula:'C29H35N7O4',smiles:'COCCN1CCN(CC1)CC2=CC=C(C=C2)C3=N[NH]C4=C3C(=O)C5=C4C=CC=C5NC(=O)NN6CCOCC6',inchi_key:'XLSYZSRXVVCHLS-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11285001',all_targets:'CDK9',compound_name_original:'RGB-286638 free base'},
+  {metadata_moa:'CDK',compound_name:'Ribociclib (Kisqali)',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7440',cas_number:'1211441-98-3',formula:'C23H30N8O',smiles:'CN(C)C(=O)C1=CC2=CN=C(NC3=NC=C(C=C3)N4CCNCC4)N=C2[N]1C5CCCC5',inchi_key:'RHXHGRAEPCAFML-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/44631912',all_targets:'CDK4/6 (Inhibition of CDK4/6 to prevent retinoblastoma (Rb) protein phosphorylation and cell cycle progression)',compound_name_original:'Ribociclib (LEE011)'},
+  {metadata_moa:'CDK',compound_name:'Roscovitine (Seliciclib, CYC202)',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1153',cas_number:'186692-46-6',formula:'C19H26N6O',smiles:'CCC(CO)NC1=NC(=C2N=C[N](C(C)C)C2=N1)NCC3=CC=CC=C3',inchi_key:'BTIHMVBBUGXLCJ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/160355',all_targets:'CDK2|CDK9 (CDK inhibitor)',compound_name_original:'Roscovitine (CYC202)'},
+  {metadata_moa:'CDK',compound_name:'TG-02',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S7002',cas_number:'937270-47-8',formula:'C23H24N4O',smiles:'CN1C/C=C/CCOC2=CC(=CC=C2)C3=CC=NC(=NC4=CC=CC(=C4)C1)N3',inchi_key:'VXBAJLGYBMTJCY-NSCUHMNNSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16739650',all_targets:'CDK9',compound_name_original:'Zotiraciclib'},
+
+  // ==== HDAC ====
+  {metadata_moa:'HDAC',compound_name:'Abexinostat',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S1090',cas_number:'783355-60-2',formula:'C21H23N3O5',smiles:'CN(C)CC1=C(OC2=CC=CC=C12)C(=O)NCCOC3=CC=C(C=C3)C(=O)NO',inchi_key:'MAUCONCHVWBMHK-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11749858',all_targets:'HDAC (HDAC inhibitor)',compound_name_original:'Abexinostat (PCI-24781)'},
+  {metadata_moa:'HDAC',compound_name:'Droxinostat',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1422',cas_number:'99873-43-5',formula:'C11H14ClNO3',smiles:'CC1=CC(=CC=C1OCCCC(=O)NO)Cl',inchi_key:'JHSXDAWGLCZYSM-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/568416',all_targets:'HDAC6|HDAC8 (HDAC inhibitor)',compound_name_original:'Droxinostat'},
+  {metadata_moa:'HDAC',compound_name:'M344',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S2779',cas_number:'251456-60-7',formula:'C16H25N3O3',smiles:'CN(C)C1=CC=C(C=C1)C(=O)NCCCCCCC(=O)NO',inchi_key:'MXWDSZWTBOCWBK-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/3994',all_targets:'HDAC (HDAC inhibitor)',compound_name_original:'M344'},
+  {metadata_moa:'HDAC',compound_name:'Pyroxamide',concentration_uM:4.2,vendor:'MedChemexpress',catalog_number:'HY-13216',cas_number:'382180-17-8',formula:'C13H19N3O3',smiles:'O=C(NO)CCCCCCC(NC1=CC=CN=C1)=O',inchi_key:'PTJGLFIIZFVFJV-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/4996',all_targets:'Apoptosis; HDAC (HDAC inhibitor)',compound_name_original:'Pyroxamide'},
+  {metadata_moa:'HDAC',compound_name:'RG2833',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7292',cas_number:'1215493-56-3',formula:'C20H25N3O2',smiles:'CC1=CC=C(C=C1)C(=O)NCCCCCC(=O)NC2=CC=CC=C2N',inchi_key:'VOPDXHFYDJAYNS-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/56654642',all_targets:'HDAC (HDAC inhibitor)',compound_name_original:'RG2833 (RGFP109)'},
+  {metadata_moa:'HDAC',compound_name:'Ricolinostat',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S8001',cas_number:'1316214-52-4',formula:'C24H27N5O3',smiles:'ONC(=O)CCCCCCNC(=O)C1=CN=C(N=C1)N(C2=CC=CC=C2)C3=CC=CC=C3',inchi_key:'QGZYDVAGYRLSKP-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/53340666',all_targets:'Apoptosis; HDAC (HDAC inhibitor)',compound_name_original:'Ricolinostat (ACY-1215)'},
+  {metadata_moa:'HDAC',compound_name:'Scriptaid',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S8043',cas_number:'287383-59-9',formula:'C18H18N2O4',smiles:'ONC(=O)CCCCCN1C(=O)C2=C3C(=CC=C2)C=CC=C3C1=O',inchi_key:'JTDYUFSDZATMKU-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5186',all_targets:'Apoptosis; Autophagy; HDAC; Influenza Virus (HDAC inhibitor)',compound_name_original:'Scriptaid'},
+  {metadata_moa:'HDAC',compound_name:'SBHA',concentration_uM:13.3,vendor:'MedChemexpress',catalog_number:'HY-W009776',cas_number:'38937-66-5',formula:'C8H16N2O4',smiles:'O=C(NO)CCCCCCC(NO)=O',inchi_key:'IDQPVOFTURLJPT-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5173',all_targets:'HDAC1|HDAC3 (HDAC inhibitor)',compound_name_original:'Suberoyl bis-hydroxamic acid (Synonyms: Suberohydroxamic acid; SBHA)'},
+  {metadata_moa:'HDAC',compound_name:'Tacedinaline',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S2818',cas_number:'112522-64-2',formula:'C15H15N3O2',smiles:'CC(=O)NC1=CC=C(C=C1)C(=O)NC2=C(N)C=CC=C2',inchi_key:'VAZAPHZUAVEOMC-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/2746',all_targets:'Apoptosis; HDAC (HDAC inhibitor)',compound_name_original:'Tacedinaline (CI994)'},
+  {metadata_moa:'HDAC',compound_name:'Pimelic Diphenylamide 106',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S6738',cas_number:'937039-45-7',formula:'C20H25N3O2',smiles:'CC1=CC=C(NC(=O)CCCCCC(=O)NC2=CC=CC=C2N)C=C1',inchi_key:'WTKBRPXPNAKVEQ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16070100',all_targets:'HDAC (HDAC inhibitor)',compound_name_original:'TC-H 106'},
+  {metadata_moa:'HDAC',compound_name:'Chidamide',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S8567',cas_number:'1616493-44-7',formula:'C22H19FN4O2',smiles:'NC1=C(NC(=O)C2=CC=C(CNC(=O)\\C=C\\C3=CC=CN=C3)C=C2)C=C(F)C=C1',inchi_key:'WXHHICFWKXDFOW-BJMVGYQFSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9800555',all_targets:'HDAC10|HDAC3 (HDAC inhibitor)',compound_name_original:'Tucidinostat (Chidamide)'},
+  {metadata_moa:'HDAC',compound_name:'UF010',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S5810',cas_number:'537672-41-6',formula:'C11H15BrN2O',smiles:'CCCCNNC(=O)C1=CC=C(Br)C=C1',inchi_key:'BVQCFCYPFJOOAV-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/4596836',all_targets:'HDAC (HDAC inhibitor)',compound_name_original:'UF010'},
+
+  // ==== MAPK ====
+  {metadata_moa:'MAPK',compound_name:'Binimetinib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7007',cas_number:'606143-89-9',formula:'C17H15BrF2N4O3',smiles:'C[N]1C=NC2=C1C=C(C(=O)NOCCO)C(=C2F)NC3=C(F)C=C(Br)C=C3',inchi_key:'ACWZRVQXLIRSDF-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/10288191',all_targets:'MAP2K1/2',compound_name_original:'Binimetinib (MEK162)'},
+  {metadata_moa:'MAPK',compound_name:'Cobimetinib',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S8041',cas_number:'934660-93-2',formula:'C21H21F3IN3O2',smiles:'OC1(CN(C1)C(=O)C2=C(NC3=CC=C(I)C=C3F)C(=C(F)C=C2)F)C4CCCCN4',inchi_key:'BSMCAPRUBJMWDF-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16222096',all_targets:'MAP2K1',compound_name_original:'Cobimetinib (GDC-0973)'},
+  {metadata_moa:'MAPK',compound_name:'Doramapimod',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1574',cas_number:'285983-48-4',formula:'C31H37N5O3',smiles:'CC1=CC=C(C=C1)[N]2N=C(C=C2NC(=O)NC3=CC=C(OCCN4CCOCC4)C5=C3C=CC=C5)C(C)(C)C',inchi_key:'MVCOAUNKQVWQHZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/156422',all_targets:'MAPK14',compound_name_original:'Doramapimod (BIRB 796)'},
+  {metadata_moa:'MAPK',compound_name:'EO-1428',concentration_uM:13.3,vendor:'MedChemexpress',catalog_number:'HY-108647',cas_number:'321351-00-2',formula:'C20H16BrClN2O',smiles:'O=C(C1=CC=C(NC2=CC=C(Br)C=C2N)C=C1Cl)C3=CC=CC=C3C',inchi_key:'HDCLCHNAEZNGNV-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9801969',all_targets:'MAPK11|MAPK14 (p38 MAPK inhibitor)',compound_name_original:'EO 1428'},
+  {metadata_moa:'MAPK',compound_name:'PH-797804',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2726',cas_number:'586379-66-0',formula:'C22H19BrF2N2O3',smiles:'CNC(=O)C1=CC(=C(C)C=C1)N2C(=CC(=C(Br)C2=O)OCC3=CC=C(F)C=C3F)C',inchi_key:'KCAJXIDMCNPGHZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/22049997',all_targets:'MAPK11|MAPK14 (p38 MAPK inhibitor)',compound_name_original:'PH-797804'},
+  {metadata_moa:'MAPK',compound_name:'LY2228820',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1494',cas_number:'862507-23-1',formula:'C24H29FN6.2CH4O3S',smiles:'CC(C)(C)C[N]1C(=NC2=CC=C(N=C12)C3=C(N=C([NH]3)C(C)(C)C)C4=CC=C(F)C=C4)N.C[S;v6](O)(=O)=O',inchi_key:'XPPBBJCBDOEXDN-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11570805',all_targets:'MAPK14 (p38 MAPK inhibitor)',compound_name_original:'Ralimetinib (LY2228820) dimesylate'},
+  {metadata_moa:'MAPK',compound_name:'SB-242235',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S0387',cas_number:'193746-75-7',formula:'C19H20FN5O',smiles:'COC1=NC=CC(=N1)C2=C(N=C[N]2C3CCNCC3)C4=CC=C(F)C=C4',inchi_key:'PDTYLGXVBIWRIM-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9863367',all_targets:'MAPK (p38 MAP kinase)',compound_name_original:'SB 242235'},
+  {metadata_moa:'MAPK',compound_name:'SB-239063',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7741',cas_number:'193551-21-2',formula:'C20H21FN4O2',smiles:'COC1=NC=CC(=N1)C2=C(N=C[N]2C3CCC(O)CC3)C4=CC=C(F)C=C4',inchi_key:'ZQUSFAUAYSEREK-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5166',all_targets:'MAPK (p38 MAPK inhibitor)',compound_name_original:'SB239063'},
+  {metadata_moa:'MAPK',compound_name:'SKF-86002',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'E2630',cas_number:'72873-74-6',formula:'C16H12FN3S',smiles:'FC1=CC=C(C=C1)C2=C([N]3CCSC3=N2)C4=CC=NC=C4',inchi_key:'YOELZIQOLWZLQC-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5228',all_targets:'ALOX5|MAPK14 (p38 MAPK inhibitor)',compound_name_original:'SKF-86002'},
+  {metadata_moa:'MAPK',compound_name:'TAK-715',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2928',cas_number:'303162-79-0',formula:'C24H21N3OS',smiles:'CCC1=NC(=C(S1)C2=CC(=NC=C2)NC(=O)C3=CC=CC=C3)C4=CC=CC(=C4)C',inchi_key:'HEKAIDKUDLCBRU-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9952773',all_targets:'MAPK14 (p38 MAPK inhibitor)',compound_name_original:'TAK-715'},
+  {metadata_moa:'MAPK',compound_name:'Trametinib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S2673',cas_number:'871700-17-3',formula:'C26H23FIN5O4',smiles:'CN1C(=O)C(=C2N(C(=O)N(C3CC3)C(=O)C2=C1NC4=CC=C(I)C=C4F)C5=CC(=CC=C5)NC(C)=O)C',inchi_key:'LIRYPHYGHXZJBZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11707110',all_targets:'MAP2K1/2',compound_name_original:'Trametinib (GSK1120212)'},
+  {metadata_moa:'MAPK',compound_name:'Ulixertinib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7854',cas_number:'869886-67-9',formula:'C21H22Cl2N4O2',smiles:'CC(C)NC1=NC=C(Cl)C(=C1)C2=C[NH]C(=C2)C(=O)NC(CO)C3=CC(=CC=C3)Cl',inchi_key:'KSERXGMCDHOLSS-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11719003',all_targets:'MAPK3/1',compound_name_original:'Ulixertinib (BVD-523)'},
+
+  // ==== PARP ====
+  {metadata_moa:'PARP',compound_name:'(20S)-Protopanaxadiol',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S4746',cas_number:'30636-90-9',formula:'C30H52O3',smiles:'CC(C)=CCCC(C)(O)C1CCC2(C)C1C(O)CC3C4(C)CCC(O)C(C)(C)C4CCC23C',inchi_key:'PYXFVCFISTUSOO-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11213350',all_targets:'PARP1 (PARP inhibitor)',compound_name_original:'(20S)-Protopanaxadiol'},
+  {metadata_moa:'PARP',compound_name:'AZD-2461',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7029',cas_number:'1174043-16-3',formula:'C22H22FN3O3',smiles:'COC1CCN(CC1)C(=O)C2=CC(=CC=C2F)CC3=NNC(=O)C4=CC=CC=C34',inchi_key:'HYNBNUYQTQIHJK-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/44199317',all_targets:'PARP (PARP inhibitor)',compound_name_original:'AZD2461'},
+  {metadata_moa:'PARP',compound_name:'DR-2313',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S6977',cas_number:'284028-90-6',formula:'C8H10N2OS',smiles:'CC1=NC2=C(CSCC2)C(=O)N1',inchi_key:'HRYKZAKEAVZGJD-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/135522417',all_targets:'PARP1|PARP3 (PARP inhibitor)',compound_name_original:'DR2313'},
+  {metadata_moa:'PARP',compound_name:'EB-47',concentration_uM:13.3,vendor:'MedChemexpress',catalog_number:'HY-108631',cas_number:'1190332-25-2',formula:'C24H29Cl2N9O',smiles:'O=C1NCC2=C(C=CC=C21)NC(CN3CCN(CC3)C([C@H]4O[C@H]([C@@H]([C@@H]4O)O)N5C6=C(N=C5)C(N)=NC=N6)=O)=O.[H]Cl.[H]Cl',inchi_key:'VVMQSDIMNDTMII-MYXHFVDASA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9871899',all_targets:'PARP1 (PARP inhibitor)',compound_name_original:'EB-47 dihydrochloride'},
+  {metadata_moa:'PARP',compound_name:'Iniparib (BSI-201)',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1087',cas_number:'160003-66-7',formula:'C7H5IN2O3',smiles:'NC(=O)C1=CC(=C(I)C=C1)[N+]([O-])=O',inchi_key:'MDOJTZQKHMAPBK-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9796068',all_targets:'PARP1',compound_name_original:'Iniparib (BSI-201)'},
+  {metadata_moa:'PARP',compound_name:'IWR-1',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7086',cas_number:'1127442-82-3',formula:'C25H19N3O3',smiles:'CC12C3CC(C=C3)C1C(=O)N(C2=O)C4=CC=C(C=C4)C(=O)NC5=CC=CC6=C5N=CC=C6',inchi_key:'JLUGUZSHOFCGPZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/44483163',all_targets:'Wnt (PARP inhibitor)',compound_name_original:'IWR-1-endo'},
+  {metadata_moa:'PARP',compound_name:'ME0328',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S7438',cas_number:'1445251-22-8',formula:'C19H19N3O2',smiles:'CC(NC(=O)CCC1=NC2=CC=CC=C2C(=O)N1)C3=CC=CC=C3',inchi_key:'QIHBWVVVRYYYRO-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/135566764',all_targets:'PARP3 (PARP inhibitor)',compound_name_original:'ME0328'},
+  {metadata_moa:'PARP',compound_name:'Niraparib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S2741',cas_number:'1038915-60-4',formula:'C19H20N4O',smiles:'NC(=O)C1=CC=CC2=C[N](N=C12)C3=CC=C(C=C3)C4CCCNC4',inchi_key:'PCHKPVIQAHNQLW-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/24958200',all_targets:'Apoptosis; PARP (PARP inhibitor)',compound_name_original:'Niraparib (MK-4827)'},
+  {metadata_moa:'PARP',compound_name:'Rucaparib (phosphate)',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S4948',cas_number:'283173-50-2',formula:'C19H18FN3O',smiles:'CNCC1=CC=C(C=C1)C2=C3CCNC(=O)C4=C3C(=CC(=C4)F)[NH]2',inchi_key:'HMABYWSNWIZPAG-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/9931953',all_targets:'PARP (PARP inhibitor)',compound_name_original:'Rucaparib'},
+  {metadata_moa:'PARP',compound_name:'E7449',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S8419',cas_number:'1140964-99-3',formula:'C18H15N5O',smiles:'O=C1NN=C2NC(=NC3=C2C1=CC=C3)CN4CC5=C(C4)C=CC=C5',inchi_key:'JLFSBHQQXIAQEC-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/135565981',all_targets:'PARP (PARP inhibitor)',compound_name_original:'Stenoparib (E7449)'},
+  {metadata_moa:'PARP',compound_name:'Talazoparib',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7048',cas_number:'1207456-01-6',formula:'C19H14F2N6O',smiles:'C[N]1N=CN=C1C2C(NC3=CC(=CC4=C3C2=NNC4=O)F)C5=CC=C(F)C=C5',inchi_key:'HWGQMRYQVZSGDQ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/135565082',all_targets:'PARP (PARP inhibitor)',compound_name_original:'Talazoparib (BMN 673)'},
+  {metadata_moa:'PARP',compound_name:'Veliparib',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S1004',cas_number:'912444-00-9',formula:'C13H16N4O',smiles:'CC1(CCCN1)C2=NC3=C(C=CC=C3[NH]2)C(N)=O',inchi_key:'JNAHVYVRKWKWKQ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11960529',all_targets:'Autophagy; PARP (PARP inhibitor)',compound_name_original:'Veliparib (ABT-888)'},
+
+  // ==== TUB ====
+  {metadata_moa:'TUB',compound_name:'ALBENDAZOLE',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S1640',cas_number:'54965-21-8',formula:'C12H15N3O2S',smiles:'CCCSC1=CC=C2N=C(NC(=O)OC)[NH]C2=C1',inchi_key:'HXHWSAZORRCQMX-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/2082',all_targets:'TUBA1A|TUBB|TUBB4B (tubulin polymerization inhibitor)',compound_name_original:'Albendazole (SKF-62979)'},
+  {metadata_moa:'TUB',compound_name:'Colchicine',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2284',cas_number:'64-86-8',formula:'C22H25NO6',smiles:'COC1=CC=C2C(=CC1=O)C(CCC3=C2C(=C(OC)C(=C3)OC)OC)NC(C)=O',inchi_key:'IAKHMKGGTNLKSZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/6167',all_targets:'Tubulin (Inhibits microtubule polymerisation )',compound_name_original:'Colchicine (NSC 757)'},
+  {metadata_moa:'TUB',compound_name:'Fenbendazole',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S2468',cas_number:'43210-67-9',formula:'C15H13N3O2S',smiles:'COC(=O)NC1=NC2=C([NH]1)C=C(SC3=CC=CC=C3)C=C2',inchi_key:'HDDSHPAODJUKPD-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/3334',all_targets:'Tubulin (Inhibits tubulin polymerisation)',compound_name_original:'Fenbendazole'},
+  {metadata_moa:'TUB',compound_name:'ixabepilone',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S7930',cas_number:'219989-84-1',formula:'C27H42N2O5S',smiles:'CC1CCCC2(C)OC2CC(NC(=O)CC(O)C(C)(C)C(=O)C(C)C1O)C(/C)=C/C3=CSC(=N3)C',inchi_key:'FABUFPQFXZVHFB-LFIBNONCSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/6445540',all_targets:'TUBB4B/TUBB3',compound_name_original:'Ixabepilone (BMS-247550)'},
+  {metadata_moa:'TUB',compound_name:'Lexibulin',concentration_uM:13.3,vendor:'Selleckchem',catalog_number:'S2195',cas_number:'917111-44-5',formula:'C24H30N6O2',smiles:'CCCC(NC1=C(C)C=NC(=N1)C2=CC(=C(NC(=O)NCC)C=C2)OC)C3=CC=CN=C3',inchi_key:'MTJHLONVHHPNSI-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/11351021',all_targets:'TUBB',compound_name_original:'Lexibulin (CYT997)'},
+  {metadata_moa:'TUB',compound_name:'MEBENDAZOLE',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S4610',cas_number:'31431-39-7',formula:'C16H13N3O3',smiles:'COC(=O)NC1=NC2=C([NH]1)C=CC(=C2)C(=O)C3=CC=CC=C3',inchi_key:'OPXLLQIJSORQAM-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/4030',all_targets:'TUBA1A|TUBB|TUBB4B (tubulin polymerization inhibitor)',compound_name_original:'Mebendazole'},
+  {metadata_moa:'TUB',compound_name:'Nocodazole',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S2775',cas_number:'31430-18-9',formula:'C14H11N3O3S',smiles:'COC(=O)NC1=NC2=CC=C(C=C2[NH]1)C(=O)C3=CC=CS3',inchi_key:'KYRVNWMVYQXFEU-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/4122',all_targets:'Tubulin (Disrupts microtubule assembly / disassembly dynamics)',compound_name_original:'Nocodazole (R17934)'},
+  {metadata_moa:'TUB',compound_name:'Paclitaxel',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S1150',cas_number:'33069-62-4',formula:'C47H51NO14',smiles:'CC(=O)OC1C(=O)C2(C)C(O)CC3OCC3(OC(C)=O)C2C(OC(=O)C4=CC=CC=C4)C5(O)CC(OC(=O)C(O)C(NC(=O)C6=CC=CC=C6)C7=CC=CC=C7)C(=C1C5(C)C)C',inchi_key:'RCINICONZNJXQF-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/36314',all_targets:'Tubulin (Stabilises tubulin polymerisation)',compound_name_original:'Paclitaxel (NSC 125973)'},
+  {metadata_moa:'TUB',compound_name:'parbendazole',concentration_uM:4.2,vendor:'Selleckchem',catalog_number:'S2444',cas_number:'14255-87-9',formula:'C13H17N3O2',smiles:'CCCCC1=CC=C2N=C(NC(=O)OC)[NH]C2=C1',inchi_key:'YRWLZFXJFBZBEY-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/26596',all_targets:'Tubulin (Inhibits tubulin polymerisation)',compound_name_original:'Parbendazole'},
+  {metadata_moa:'TUB',compound_name:'Vinblastine sulfate',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S4505',cas_number:'143-67-9',formula:'C46H58N4O9.H2SO4',smiles:'CCC1(O)CC2CN(CCC3=C([NH]C4=CC=CC=C34)C(C2)(C(=O)OC)C5=C(OC)C=C6N(C)C7C(O)(C(OC(C)=O)C8(CC)C=CCN9CCC7(C89)C6=C5)C(=O)OC)C1.O[S](O)(=O)=O',inchi_key:'KDQAABAKXDWYSZ-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/5388983',all_targets:'Tubulin (Disrupts microtubule assembly / disassembly dynamics)',compound_name_original:'Vinblastine (NSC-49842) sulfate'},
+  {metadata_moa:'TUB',compound_name:'Vincristine sulfate',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S1241',cas_number:'2068-78-2',formula:'C46H58N4O14S',smiles:'CCC1(O)CC2CN(CCC3=C([NH]C4=C3C=CC=C4)C(C2)(C(=O)OC)C5=CC6=C(C=C5OC)N(C=O)C7C(O)(C(OC(C)=O)C8(CC)C=CCN9CCC67C89)C(=O)OC)C1.O[S](O)(=O)=O',inchi_key:'AQTQHPDCURKLKT-UHFFFAOYSA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/249332',all_targets:'Tubulin (Inhibits microtubule depolymerisation )',compound_name_original:'Vincristine (NSC-67574) sulfate'},
+  {metadata_moa:'TUB',compound_name:'Vinorelbine ditartrate',concentration_uM:1.7,vendor:'Selleckchem',catalog_number:'S4269',cas_number:'125317-39-7',formula:'C45H54N4O8.2C4H6O6',smiles:'CCC1=CC2CN(C1)CC3=C([NH]C4=C3C=CC=C4)C(C2)(C(=O)OC)C5=C(OC)C=C6N(C)C7C(O)(C(OC(C)=O)C8(CC)C=CCN9CCC7(C89)C6=C5)C(=O)OC.OC(C(O)C(O)=O)C(O)=O.OC(C(O)C(O)=O)C(O)=O',inchi_key:'ZLIPKSVXTCRHIB-GNBHHJMASA-N',reference_url:'https://pubchem.ncbi.nlm.nih.gov/compound/16079018',all_targets:'Tubulin (Disrupts microtubule assembly / disassembly dynamics)',compound_name_original:'Vinorelbine ditartrate (KW-2307)'}
+];
+
+const state = {
+  sortKey: null,
+  sortDir: 'asc'
+};
+
+const els = {
+  q: document.getElementById('q'),
+  moa: document.getElementById('moa'),
+  vendor: document.getElementById('vendor'),
+  minConc: document.getElementById('minConc'),
+  maxConc: document.getElementById('maxConc'),
+  resetBtn: document.getElementById('resetBtn'),
+  csvBtn: document.getElementById('csvBtn'),
+  tbody: document.querySelector('#compoundsTable tbody'),
+  counter: document.getElementById('counter'),
+  sortStatus: document.getElementById('sortStatus'),
+  headers: Array.from(document.querySelectorAll('thead th.sortable'))
+};
+
+function uniqueSorted(arr, selector){
+  return [...new Set(arr.map(selector))].filter(Boolean).sort((a,b)=>a.localeCompare(b));
+}
+
+function initFilters(){
+  // MOA options
+  uniqueSorted(data, d=>d.metadata_moa).forEach(v=>{
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    els.moa.appendChild(opt);
+  });
+  // Vendors
+  uniqueSorted(data, d=>d.vendor).forEach(v=>{
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    els.vendor.appendChild(opt);
+  });
+}
+
+function matchesQuery(d, q){
+  if(!q) return true;
+  const needle = q.toLowerCase();
+  return Object.values(d).some(val => (val+'').toLowerCase().includes(needle));
+}
+
+function withinConc(d, minV, maxV){
+  if(minV !== '' && d.concentration_uM < Number(minV)) return false;
+  if(maxV !== '' && d.concentration_uM > Number(maxV)) return false;
+  return true;
+}
+
+function getBadgeClass(moa){
+  return 'badge moa-' + (moa || '').toUpperCase();
+}
+
+function sortData(rows){
+  if(!state.sortKey) return rows;
+  const key = state.sortKey;
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  const isNum = document.querySelector(`th[data-key="${key}"]`)?.dataset.type === 'number';
+  return rows.slice().sort((a,b)=>{
+    const av = a[key], bv = b[key];
+    if(isNum){
+      return dir * ((Number(av)||0) - (Number(bv)||0));
+    }
+    return dir * (String(av).localeCompare(String(bv)));
+  });
+}
+
+function render(){
+  const q = els.q.value.trim();
+  const moa = els.moa.value;
+  const vendor = els.vendor.value;
+  const minC = els.minConc.value;
+  const maxC = els.maxConc.value;
+
+  let rows = data.filter(d =>
+    matchesQuery(d, q) &&
+    (!moa || d.metadata_moa === moa) &&
+    (!vendor || d.vendor === vendor) &&
+    withinConc(d, minC, maxC)
+  );
+
+  rows = sortData(rows);
+
+  els.tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  rows.forEach(d=>{
+    const tr = document.createElement('tr');
+
+    const tdMOA = document.createElement('td');
+    tdMOA.innerHTML = `<span class="${getBadgeClass(d.metadata_moa)}">${d.metadata_moa}</span>`;
+    tr.appendChild(tdMOA);
+
+    const tdName = document.createElement('td');
+    tdName.textContent = d.compound_name;
+    tr.appendChild(tdName);
+
+    const tdRef = document.createElement('td');
+    tdRef.className = 'link';
+    const a = document.createElement('a');
+    a.href = d.reference_url; a.target = '_blank'; a.rel='noopener';
+    a.textContent = 'PubChem';
+    tdRef.appendChild(a);
+    tr.appendChild(tdRef);
+
+    const tdConc = document.createElement('td');
+    tdConc.textContent = d.concentration_uM;
+    tr.appendChild(tdConc);
+
+    const tdVendor = document.createElement('td');
+    tdVendor.textContent = d.vendor;
+    tr.appendChild(tdVendor);
+
+    const tdCat = document.createElement('td');
+    tdCat.textContent = d.catalog_number;
+    tr.appendChild(tdCat);
+
+    const tdCAS = document.createElement('td');
+    tdCAS.textContent = d.cas_number;
+    tr.appendChild(tdCAS);
+
+    const tdFormula = document.createElement('td');
+    tdFormula.className = 'mono';
+    tdFormula.textContent = d.formula;
+    tr.appendChild(tdFormula);
+
+    const tdSmiles = document.createElement('td');
+    tdSmiles.className = 'mono truncate';
+    tdSmiles.title = d.smiles;
+    tdSmiles.textContent = d.smiles;
+    tr.appendChild(tdSmiles);
+
+    const tdInchi = document.createElement('td');
+    tdInchi.className = 'mono';
+    tdInchi.textContent = d.inchi_key;
+    tr.appendChild(tdInchi);
+
+    const tdTargets = document.createElement('td');
+    tdTargets.textContent = d.all_targets;
+    tr.appendChild(tdTargets);
+
+    const tdOrig = document.createElement('td');
+    tdOrig.textContent = d.compound_name_original;
+    tr.appendChild(tdOrig);
+
+    frag.appendChild(tr);
+  });
+
+  els.tbody.appendChild(frag);
+  els.counter.textContent = `${rows.length} compound${rows.length===1?'':'s'} shown`;
+  els.sortStatus.textContent = state.sortKey ? `Sorted by ${state.sortKey} (${state.sortDir})` : 'Not sorted';
+}
+
+function attachEvents(){
+  ['input','change'].forEach(ev=>{
+    els.q.addEventListener(ev, render);
+    els.moa.addEventListener(ev, render);
+    els.vendor.addEventListener(ev, render);
+    els.minConc.addEventListener(ev, render);
+    els.maxConc.addEventListener(ev, render);
+  });
+  els.resetBtn.addEventListener('click', ()=>{
+    els.q.value = '';
+    els.moa.value = '';
+    els.vendor.value = '';
+    els.minConc.value = '';
+    els.maxConc.value = '';
+    state.sortKey = null;
+    state.sortDir = 'asc';
+    render();
+  });
+  els.headers.forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.key;
+      if(!key) return;
+      if(state.sortKey === key){
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortKey = key;
+        state.sortDir = 'asc';
+      }
+      render();
+    });
+  });
+  els.csvBtn.addEventListener('click', exportCSV);
+}
+
+function csvEscape(val){
+  if(val == null) return '';
+  const s = String(val);
+  if(/[",\n]/.test(s)){
+    return `"${s.replace(/"/g,'""')}"`;
+  }
+  return s;
+}
+
+function exportCSV(){
+  // Export current filtered + sorted view
+  const q = els.q.value.trim();
+  const moa = els.moa.value;
+  const vendor = els.vendor.value;
+  const minC = els.minConc.value;
+  const maxC = els.maxConc.value;
+  let rows = data.filter(d =>
+    matchesQuery(d, q) &&
+    (!moa || d.metadata_moa === moa) &&
+    (!vendor || d.vendor === vendor) &&
+    withinConc(d, minC, maxC)
+  );
+  rows = sortData(rows);
+
+  const headers = ['Metadata_moa','Compound_name','Reference_URL','Concentration_uM','Vendor','Catalog_Number','CAS Number','Formula','SMILES','InChI_Key','All_targets','Compound_name_original'];
+  const keys = ['metadata_moa','compound_name','reference_url','concentration_uM','vendor','catalog_number','cas_number','formula','smiles','inchi_key','all_targets','compound_name_original'];
+
+  const lines = [];
+  lines.push(headers.map(csvEscape).join(','));
+  rows.forEach(r=>{
+    lines.push(keys.map(k=>csvEscape(r[k])).join(','));
+  });
+  const csv = lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'compounds_filtered_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+initFilters();
+attachEvents();
+render();
+</script>
+</body>
+</html>
