@@ -15,7 +15,7 @@ This codebase supports the analysis presented in the preprint and optionally the
 
 To run the feature extraction, download the image dataset from [**Figshare**](https://doi.org/10.17044/scilifelab.29315642)
 
-For an overview of the compounds used in the paper see [**Supplementary Table**](https://raw.githubusercontent.com/edvinforsgren/LCTP/refs/heads/main/assets/Supplementary_Table_6.html)
+For an overview of the compounds used in the paper see [**Supplementary Table**](https://raw.githack.com/edvinforsgren/LCTP/refs/heads/main/assets/Supplementary_Table_6.html)
 
 ## Getting Started
 
